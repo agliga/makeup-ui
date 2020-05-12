@@ -17,6 +17,16 @@ var ExitEmitter = require('makeup-exit-emitter');
 
 var focusables = require('makeup-focusables');
 
+var debounce = function debounce(func, delay) {
+  var inDebounce;
+  return function () {
+    clearTimeout(inDebounce);
+    inDebounce = setTimeout(function () {
+      return func();
+    }, delay);
+  };
+};
+
 var defaultOptions = {
   alwaysDoFocusManagement: false,
   ariaControls: true,
@@ -62,6 +72,8 @@ function onHostFocus() {
 }
 
 function onHostHover() {
+  console.log('hover');
+  clearTimeout(this._mouseLeft);
   this._expandWasHoverActivated = true;
   this.expanded = true;
 }
@@ -70,8 +82,14 @@ function onFocusExit() {
   this.expanded = false;
 }
 
-function onMouseLeave() {
-  this.expanded = false;
+function onMouseLeave(e) {
+  var _this = this;
+
+  clearTimeout(this._mouseLeft);
+  this._mouseLeft = setTimeout(function () {
+    console.log(e, _this.el, _this.el.contains(e.target));
+    _this.expanded = false;
+  }, 500);
 }
 
 function _onDocumentClick() {
@@ -255,6 +273,7 @@ module.exports = /*#__PURE__*/function () {
     set: function set(bool) {
       if (bool === true) {
         this.hostEl.addEventListener('mouseenter', this._hostHoverListener);
+        this.contentEl.addEventListener('mouseenter', this._hostHoverListener);
 
         if (this.options.autoCollapse === true) {
           this.collapseOnMouseOut = true;
@@ -292,6 +311,7 @@ module.exports = /*#__PURE__*/function () {
     set: function set(bool) {
       if (bool === true) {
         this.el.addEventListener('mouseleave', this._mouseLeaveListener);
+        this.contentEl.addEventListener('mouseleave', this._mouseLeaveListener);
       } else {
         this.el.removeEventListener('mouseleave', this._mouseLeaveListener);
       }
@@ -303,6 +323,7 @@ module.exports = /*#__PURE__*/function () {
     },
     set: function set(bool) {
       if (bool === true && this.expanded === false) {
+        clearTimeout(this._mouseLeft);
         this.hostEl.setAttribute('aria-expanded', 'true');
 
         if (this.options.expandedClass) {
